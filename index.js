@@ -7,11 +7,11 @@ app.use(require('cors')());
 app.use(express.json());
 
 // Verify variables exist
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    console.error("CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing!");
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+    console.error("CRITICAL: SUPABASE_URL or SUPABASE_KEY is missing!");
 }
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 app.get('/test-db', async (req, res) => {
     try {
