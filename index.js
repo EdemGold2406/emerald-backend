@@ -2,44 +2,47 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const Groq = require('groq-sdk');
-const { createClient } = require('@supabase/supabase-js'); // 1. Import Supabase
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// 2. Initialize Supabase
+// Initialize Supabase with the key we just fixed
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 app.get('/', (req, res) => res.send('Emerald Backend Online'));
 
-// 3. Updated Copilot Endpoint that can talk to Supabase
 app.post('/api/copilot', async (req, res) => {
   const { messages, userRole, context } = req.body;
-  const lastMessage = messages[messages.length - 1].content;
+  const lastMessage = messages[messages.length - 1].content.toLowerCase();
 
   try {
-    // A. Check if the user is asking for specific student data
-    if (lastMessage.toLowerCase().includes('result') || lastMessage.toLowerCase().includes('average')) {
-      const { data, error } = await supabase
-        .from('results')
-        .select('*, subjects(name)')
-        .limit(5); // This fetches real data from your DB!
+    let dbInfo = "";
+    
+    // IF USER ASKS FOR STUDENT COUNT, FETCH FROM SUPABASE
+    if (lastMessage.includes('total') || lastMessage.includes('how many')) {
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
       
-      if (data) {
-        // We inject the database data into the AI prompt so it knows the answer
-        messages.push({ role: "system", content: `Here is the student data from the database: ${JSON.stringify(data)}` });
+      if (!error) {
+        dbInfo = `Database report: There are exactly ${count} students in the profiles table.`;
       }
     }
 
-    // B. AI Processing
+    // AI Processing with Database Context
     const chatCompletion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
-        { role: "system", content: `You are Emerald. Current Page: ${context}. 
-          If user asks for navigation, return JSON: {"action": "navigate", "path": "/your-path"}. 
-          If user asks for data, use the provided context to answer.` },
+        { 
+          role: "system", 
+          content: `You are Emerald, an executive assistant for Emerald Field School. 
+          Context: ${dbInfo}. Current Page: ${context}. User Role: ${userRole}.
+          If the user asks for a total count, use the database report provided.
+          If the user asks to navigate, return JSON: {"action": "navigate", "path": "/your-path"}.` 
+        },
         ...messages
       ],
       temperature: 0.5,
@@ -48,7 +51,7 @@ app.post('/api/copilot', async (req, res) => {
     res.json({ reply: chatCompletion.choices[0].message.content });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ error: "Failed to connect to AI/Database" });
+    res.status(500).json({ reply: "I'm having trouble reading the database. Check logs." });
   }
 });
 
