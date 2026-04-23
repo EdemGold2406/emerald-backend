@@ -68,6 +68,23 @@ app.post('/api/copilot', async (req, res) => {
     res.json({ reply: chatCompletion.choices[0].message.content });
   } catch (error) { res.status(500).json({ reply: "I'm offline. Check logs." }); }
 });
+// student records API
+app.get('/api/students', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('profiles').select('*').eq('role', 'Student');
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/students/lock', async (req, res) => {
+  const { level, locked } = req.body;
+  try {
+    const { data, error } = await supabase.from('profiles').update({ locked }).eq('level', level);
+    if (error) throw error;
+    res.json({ message: "Cohort lock status updated" });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Backend running on ${PORT}`));
