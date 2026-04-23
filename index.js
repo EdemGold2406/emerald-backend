@@ -9,25 +9,37 @@ app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-app.get('/', (req, res) => res.send('Emerald Backend Online'));
+app.get('/', (req, res) => res.send('Backend Online'));
 
-// This is the route you were trying to reach
+// --- STUDENTS ---
 app.get('/api/students', async (req, res) => {
-    try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('role', 'Student');
-        if (error) throw error;
-        res.json(data);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    const { data } = await supabase.from('profiles').select('*').eq('role', 'Student');
+    res.json(data);
 });
 
-// This is your Test route
-app.get('/test-db', async (req, res) => {
-    try {
-        const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        if (error) throw error;
-        res.json({ status: "Connected!", studentCount: count });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+app.post('/api/students/lock', async (req, res) => {
+    const { level, locked } = req.body;
+    await supabase.from('profiles').update({ locked }).eq('level', level);
+    res.json({ success: true });
+});
+
+// --- TEACHERS ---
+app.get('/api/teachers', async (req, res) => {
+    const { data } = await supabase.from('profiles').select('*').eq('role', 'Teacher');
+    res.json(data);
+});
+
+app.post('/api/teachers/assign-subject', async (req, res) => {
+    const { teacherId, subjectId } = req.body;
+    await supabase.from('teacher_assignments').insert({ teacher_id: teacherId, subject_id: subjectId });
+    res.json({ success: true });
+});
+
+app.post('/api/teachers/make-class-teacher', async (req, res) => {
+    const { teacherId, classId } = req.body;
+    await supabase.from('teacher_assignments').update({ is_class_teacher: true }).eq('teacher_id', teacherId).eq('class_id', classId);
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Backend running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
