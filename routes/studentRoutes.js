@@ -17,9 +17,9 @@ module.exports = (supabase) => {
 
     // DELETE
     router.delete('/:id', async (req, res) => {
-        const { error } = await supabase.from('profiles').delete().eq('id', req.params.id);
-        res.json({ success: !error });
-    });
+    const { error } = await supabase.from('profiles').delete().eq('id', req.params.id);
+    res.json({ success: !error });
+});
 
     return router;
 };
