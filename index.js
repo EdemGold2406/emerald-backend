@@ -49,6 +49,39 @@ app.post('/api/teachers/make-class-teacher', async (req, res) => {
     await supabase.from('teacher_assignments').update({ is_class_teacher: true }).eq('teacher_id', teacherId).eq('class_id', classId);
     res.json({ success: true });
 });
+app.post('/api/students/bulk', upload.single('file'), async (req, res) => {
+    try {
+        const { class_id } = req.body; // Admin selects target class
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        
+        const students = data.map(s => ({
+            first_name: s.first_name,
+            surname: s.surname,
+            email: `${s.first_name.toLowerCase()}${s.surname.toLowerCase()}@efa.sch.ng`,
+            role: 'Student',
+            reg_no: s.reg_no,
+            class_id: class_id // Attach to class
+        }));
 
+        const { error } = await supabase.from('profiles').insert(students);
+        if (error) throw error;
+        res.json({ message: "Bulk upload successful!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/students/add-individual', async (req, res) => {
+    try {
+        const { first_name, surname, reg_no, class_id } = req.body;
+        const student = {
+            first_name, surname, reg_no, class_id,
+            email: `${first_name.toLowerCase()}${surname.toLowerCase()}@efa.sch.ng`,
+            role: 'Student'
+        };
+        const { error } = await supabase.from('profiles').insert([student]);
+        if (error) throw error;
+        res.json({ message: "Student added successfully!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
