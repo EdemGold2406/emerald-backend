@@ -23,9 +23,18 @@ app.post('/api/students/lock', async (req, res) => {
     res.json({ success: true });
 });
 
-// --- TEACHERS ---
+// --- TEACHERS ROUTE ---
 app.get('/api/teachers', async (req, res) => {
-    const { data } = await supabase.from('profiles').select('*').eq('role', 'Teacher');
+    // Try both lowercase and capitalized to be safe
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or('role.eq.Teacher,role.eq.teacher'); 
+    
+    if (error) {
+        console.error("Supabase Error:", error);
+        return res.status(500).json({ error: error.message });
+    }
     res.json(data);
 });
 
